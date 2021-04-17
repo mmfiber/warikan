@@ -48,6 +48,7 @@
 ===
 ### 時間計測
 * 概要・必須の使用決め: 10min
+* 最低限の仕様の実装: 5h 10min
 
 ### TODO
 * Document Fragment とは

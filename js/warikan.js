@@ -12,26 +12,31 @@ const formItems = {
     id: "total_fee",
     type: "number",
     label: "支払総額",
+    default: 75000,
   },
   donation: {
     id: "donation",
     type: "number",
     label: "カンパ",
+    default: 10000,
   },
   roundUnit: {
     id: "round_unit",
     type: "number",
     label: "丸め単位",
+    default: 500,
   },
   numPeople: {
     id: "num_people",
     type: "number",
     label: "人数",
+    default: 12,
   },
   roundType: {
     id: "round_type",
     type: "radio",
     label: "端数処理",
+    default: 0, // the number of options
     options: [
       {
         label: "先輩ありがとう",
@@ -54,15 +59,16 @@ export default class Warikan {
 
     for(const k in this.formItems) {
       const itemNode = this.formItemToNode(
-        this.formItems[k].id,
         this.formItems[k].type,
+        this.formItems[k].default,
+        this.formItems[k].id,
         this.formItems[k].options
       )
       if(!itemNode) return new Error()
 
       const inputNode = this.cloneNodeById(TEMPLATE_ID)
       const container = inputNode.querySelector(".input_container")
-      container.id = this.formItems[k].id,
+      container.id        = this.formItems[k].id,
       container.innerHTML = `${this.formItems[k].label}:<br>`
       container.appendChild(itemNode)
 
@@ -70,15 +76,24 @@ export default class Warikan {
     }
   }
 
-  formItemToNode(id, type, options) {
+  formItemToNode(type, value, id, options) {
     let itemNode = null
     if (type === "number") {
-      itemNode = this.createInputElem(type)
+      itemNode = this.createInputElem(type, value)
     }
     if (type === "radio") {
       const fragment = document.createDocumentFragment();
-      options.forEach(o => {
-        const node = this.createInputElemWithLabel(type, null, o.value, o.label, id)
+      options.forEach((option, idx) => {
+        const name    = id
+        const checked = idx === value
+        const node    = this.createInputElemWithLabel(
+          type,
+          option.value,
+          null,
+          option.label,
+          name,
+          checked
+        )
         fragment.appendChild(node)
       })
       fragment.id = id
@@ -94,21 +109,23 @@ export default class Warikan {
       : new Error(htmlId)
   }
 
-  createInputElem(type, id=null, value=null, name=null) {
+  createInputElem(type, value, id=null, name=null, checked=null) {
     const inputElem = document.createElement("input")
-    if(id)
-      inputElem.id = id
     if(type)
       inputElem.type = type
     if(value)
       inputElem.value = value
+    if(id)
+      inputElem.id = id
     if(name)
       inputElem.name = name
+    if(checked)
+      inputElem.checked = checked
     return inputElem
   }
 
-  createInputElemWithLabel(type, id, value, label, name) {
-    const inputElem = this.createInputElem(type, id, value, name)
+  createInputElemWithLabel(type, id, value, label, name, checked) {
+    const inputElem = this.createInputElem(type, id, value, name, checked)
     const labelElem = document.createElement("label")
     labelElem.appendChild(inputElem)
     labelElem.insertAdjacentHTML("beforeend", label)
@@ -164,12 +181,6 @@ export default class Warikan {
    calcAndDisplayResult(data) {
     const remaingFee = data.totalFee - data.donation
     const normalFee  = this.calcNormalFee(
-      remaingFee,
-      data.numPeople,
-      data.roundUnit,
-      data.roundType
-    )
-    console.log(
       remaingFee,
       data.numPeople,
       data.roundUnit,
