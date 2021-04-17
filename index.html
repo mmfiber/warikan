@@ -8,24 +8,22 @@
 </head>
 <body>
   <!-- template for input -->
-  <template id="form_template">
-    <p><label></label></p>
+  <template id="form_tmpl_input">
+    <p><label class="input_container"></label></p>
   </template>
-  <!-- template for input type: radio -->
-  <!-- <template id="form_tmpl_input_radio">
-    <p>
-      <label>
-        <input type="radio">
-      </label>
-    </p>
-  </template> -->
-  <div id="container">
-    <h1>割り勘計算</h1>
-    <form id="warikan_form">
+
+  <!-- template for action btn -->
+  <template id="form_tmpl_action_btn">
+    <p class="action_btn_wrapper">
       <input type="submit" value="計算">
       <input type="reset" value="クリア">
-    </form>
+    </p>
+  </template>
+
+  <div id="container">
+    <h1>割り勘計算</h1>
+    <form id="warikan_form"></form>
   </div>
-  <script src="main.js" type="module"></script>
+  <script src="./js/main.js" type="module"></script>
 </body>
 </html>
