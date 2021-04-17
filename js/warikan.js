@@ -1,6 +1,6 @@
 "use strict"
 import { WARIKAN_ROUND_TYPE_ENUM } from "./enum.js"
-import { isNumber, isNaturalNumber } from "./utils.js"
+import { isNumber, isNaturalNumber, uuid } from "./utils.js"
 
 const FORM_ID       = "warikan_form"
 const ACTION_BTN_ID = "action_btn"
@@ -40,14 +40,23 @@ const formItems = {
     options: [
       {
         label: "先輩ありがとう",
-        value: WARIKAN_ROUND_TYPE_ENUM.PAY_A_LOT_THNKS
+        value: WARIKAN_ROUND_TYPE_ENUM.PAY_A_LOT_THNKS,
+        insertType: "beforeend", // for insertAdjacentHTML. set the label position for input.
       },
       {
         label: "幹事ありがとう",
-        value: WARIKAN_ROUND_TYPE_ENUM.ORGANIZER_THNKS
+        value: WARIKAN_ROUND_TYPE_ENUM.ORGANIZER_THNKS,
+        insertType: "beforeend",
       },
     ]
   },
+  otherPeopleName: {
+    id: "other_people_names",
+    type: "text",
+    label: "先輩の名前",
+    default: 0,
+    options: [{ label: "",  value: "", insertType: "afterbegin" }]
+  }
 }
 
 export default class Warikan {
@@ -58,48 +67,28 @@ export default class Warikan {
     const actionBtn = document.getElementById(ACTION_BTN_ID)
 
     for(const k in this.formItems) {
-      const itemNode = this.formItemToNode(
+      const itemElem = this.formItemToElem(
         this.formItems[k].type,
         this.formItems[k].default,
         this.formItems[k].id,
         this.formItems[k].options
       )
-      if(!itemNode) return new Error()
+      if(!itemElem) return new Error()
 
-      const inputNode = this.cloneNodeById(TEMPLATE_ID)
-      const container = inputNode.querySelector(".input_container")
+      const inputElem = this.cloneNodeById(TEMPLATE_ID)
+      const container = inputElem.querySelector(".input_container")
       container.id        = this.formItems[k].id,
       container.innerHTML = `${this.formItems[k].label}:<br>`
-      container.appendChild(itemNode)
+      container.appendChild(itemElem)
 
-      form.insertBefore(inputNode, actionBtn)
+      form.insertBefore(inputElem, actionBtn)
     }
   }
 
-  formItemToNode(type, value, id, options) {
-    let itemNode = null
-    if (type === "number") {
-      itemNode = this.createInputElem(type, value)
-    }
-    if (type === "radio") {
-      const fragment = document.createDocumentFragment();
-      options.forEach((option, idx) => {
-        const name    = id
-        const checked = idx === value
-        const node    = this.createInputElemWithLabel(
-          type,
-          option.value,
-          null,
-          option.label,
-          name,
-          checked
-        )
-        fragment.appendChild(node)
-      })
-      fragment.id = id
-      itemNode = fragment
-    }
-    return itemNode
+  formItemToElem(type, value, id, options) {
+    return type === "number"
+      ? this.createInputElem(type, value)
+      : this.createMultiInputsElem(type, value, id, options)
   }
 
   cloneNodeById(htmlId) {
@@ -124,12 +113,53 @@ export default class Warikan {
     return inputElem
   }
 
-  createInputElemWithLabel(type, id, value, label, name, checked) {
-    const inputElem = this.createInputElem(type, id, value, name, checked)
-    const labelElem = document.createElement("label")
-    labelElem.appendChild(inputElem)
-    labelElem.insertAdjacentHTML("beforeend", label)
-    return labelElem
+  createMultiInputsElem(type, value, id, options) {
+    const fragment = document.createDocumentFragment();
+    options.forEach((opt, idx) => {
+      const name    = id
+      const checked = idx === value
+
+      const inputElem = this.createInputElem(type, opt.value, null, name, checked)
+      const labelElem = document.createElement("label")
+      labelElem.appendChild(inputElem)
+      labelElem.insertAdjacentHTML(opt.insertType, opt.label)
+
+      fragment.appendChild(labelElem)
+
+      if (type === "text") {
+        const insertInputBtn = document.createElement("button")
+        insertInputBtn.id = "other_people_name_add"
+        insertInputBtn.innerHTML = "追加"
+        insertInputBtn.addEventListener("click", this.insertNameInput)
+        fragment.appendChild(insertInputBtn)
+      }
+    })
+    fragment.id = id
+    return fragment
+  }
+
+  insertNameInput() {
+    const item = formItems.otherPeopleName
+
+    const idPrefix = "other_people_name_"
+    const id       = idPrefix  + uuid()
+
+    const parentElem = document.getElementById(item.id)
+    const deleteBtn  = document.createElement("button")
+    deleteBtn.innerHTML = "削除"
+    deleteBtn.onclick = () => {
+      // can refer id and parentscope
+      const element = document.getElementById(id)
+      parentElem.removeChild(element)
+    }
+
+    const addBtnElem = document.getElementById(idPrefix + "add")
+    const inputElem  = document.createElement("input")
+    const container  = document.createElement("div")
+    container.id = id
+    container.appendChild(inputElem)
+    container.appendChild(deleteBtn)
+    parentElem.insertBefore(container, addBtnElem)
   }
 
   fetchData() {
