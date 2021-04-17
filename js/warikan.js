@@ -51,11 +51,11 @@ const formItems = {
     ]
   },
   otherPeopleName: {
-    id: "other_people_names",
+    id: "other_people_name",
     type: "text",
-    label: "先輩の名前",
+    label: "先輩や幹事の名前",
     default: 0,
-    options: [{ label: "",  value: "", insertType: "afterbegin" }]
+    options: [{ label: "",  value: "名前", insertType: "afterbegin" }]
   }
 }
 
@@ -116,10 +116,15 @@ export default class Warikan {
   createMultiInputsElem(type, value, id, options) {
     const fragment = document.createDocumentFragment();
     options.forEach((opt, idx) => {
-      const name    = id
-      const checked = idx === value
+      let inputElem = null
+      if (type === "radio") {
+        const name = id
+        const checked = idx === value
+        inputElem = this.createInputElem(type, opt.value, null, name, checked)
+      } else {
+        inputElem = this.createInputElem(type, opt.value)
+      }
 
-      const inputElem = this.createInputElem(type, opt.value, null, name, checked)
       const labelElem = document.createElement("label")
       labelElem.appendChild(inputElem)
       labelElem.insertAdjacentHTML(opt.insertType, opt.label)
@@ -167,12 +172,18 @@ export default class Warikan {
     for(const property in this.formItems) {
       const id = this.formItems[property].id
       const query = 
-        this.formItems[property].type === "number"
-          ? "input"
-          : "input:checked"
+        this.formItems[property].type === "radio"
+          ? "input:checked"
+          : "input"
       const inputNode = document.getElementById(id)
-      const inputElem = inputNode.querySelector(query)
-      data[property] = inputElem ? inputElem.value : null
+
+      if(this.formItems[property].type === "text") {
+        const inputElems = inputNode.querySelectorAll(query)
+        data[property] = inputElems ? Array.from(inputElems).map(e => e.value) : null
+      } else {
+        const inputElem = inputNode.querySelector(query)
+        data[property] = inputElem ? inputElem.value : null
+      }
     }
     return data
   }
@@ -189,18 +200,29 @@ export default class Warikan {
     }
 
     for(const k in data) {
-      const parsedNum  = Number.parseInt(data[k])
-      parsedData[k] = parsedNum
+      const parsed  =
+        k === "otherPeopleName"
+          ? data[k]
+          : Number.parseInt(data[k])
+      parsedData[k] = parsed
 
-      const isValidVal = 
-        k === "donation"
-          ? isNaturalNumber(parsedNum)
-          : isNumber(parsedNum)
+      const isValidVal = this.validateByProperty(parsed, k)
       if(!isValidVal) error.push({id: this.formItems[k].id, msg: "input error"})
     }
     isValid = error.length === 0
 
     return { isValid, parsedData, error }
+  }
+
+  validateByProperty(value, property) {
+    switch(property) {
+      case "donation":
+        return isNaturalNumber(value)
+      case "otherPeopleName":
+        return value.length > 0
+      default:
+        return isNumber(value)
+    }
   }
 
   /**
@@ -209,17 +231,25 @@ export default class Warikan {
    *  must has the same properties as formItems
    */
    calcAndDisplayResult(data) {
-    const remaingFee = data.totalFee - data.donation
-    const normalFee  = this.calcNormalFee(
+    const remaingFee     = data.totalFee - data.donation
+    const numOtherPeople = data.otherPeopleName.length
+    const normalFee = this.calcNormalFee(
       remaingFee,
       data.numPeople,
       data.roundUnit,
       data.roundType
     )
-    const otherFee = this.calcOtherFee(
+    const {
+      otherNormalFee,
+      otherOtherFee,
+      otherFractionFee,
+      numOtherOther
+    } = this.calcOtherFee(
       remaingFee,
       normalFee,
-      data.numPeople
+      data.numPeople,
+      numOtherPeople,
+      data.roundUnit
     )
     const otherName = this.getOtherName(data.roundType)
 
@@ -228,12 +258,16 @@ export default class Warikan {
       data.donation,
       data.numPeople,
       normalFee,
-      otherFee,
-      otherName
+      otherNormalFee,
+      otherOtherFee,
+      otherFractionFee,
+      otherName,
+      numOtherPeople,
+      numOtherOther
     ) 
   }
 
-  calcNormalFee(remaingFee, numPeople, roundUnit, roundType) {
+  calcNormalFee(remaingFee, numPeople, roundUnit, roundType=null) {
     switch(roundType) {
       case WARIKAN_ROUND_TYPE_ENUM.PAY_A_LOT_THNKS:
         return Math.floor(remaingFee / numPeople / roundUnit) * roundUnit
@@ -244,8 +278,29 @@ export default class Warikan {
     }
   }
 
-  calcOtherFee(remaingFee, normalFee, numPeople) {
-    return remaingFee - normalFee * (numPeople - 1)
+  calcOtherFee(remaingFee, normalFee, numPeople, numOtherPeople, roundUnit) {
+    const otherRemaingFee = remaingFee - normalFee * (numPeople - numOtherPeople)
+    const otherNormalFee  = this.calcNormalFee(otherRemaingFee, numOtherPeople, roundUnit)
+    let fraction = otherRemaingFee - otherNormalFee * numOtherPeople
+    if(fraction === 0) return { otherNormalFee }
+
+    let count = 0
+    while(fraction >= roundUnit) {
+      fraction -= roundUnit
+      count++
+    }
+    const otherOtherFee = otherNormalFee + roundUnit
+
+    console.log(fraction, count)
+    let otherFractionFee = null
+    if (fraction !== 0) otherFractionFee = otherNormalFee + fraction
+
+    return {
+      otherNormalFee,
+      otherOtherFee,
+      otherFractionFee,
+      numOtherOther: count,
+    }
   }
 
   getOtherName(roundType) {
@@ -264,9 +319,56 @@ export default class Warikan {
     donation,
     numPeople,
     normalFee,
-    otherFee,
-    otherName
+    otherNormalFee,
+    otherOtherFee,
+    otherFractionFee,
+    otherName,
+    numOtherPeople,
+    numOtherOther,
   ) {
+    const insertOtherFeeRow = () => {
+      if(!otherOtherFee) {
+        return `
+        <tr>
+          <th>${otherName}</th>
+          <td>${numOtherPeople}</td>
+          <td>${otherNormalFee}</td>
+        <tr>
+        `
+      } 
+      if(otherFractionFee) {
+        return `
+        <tr>
+          <th>${otherName}</th>
+          <td>${numOtherPeople - numOtherOther - 1}</td>
+          <td>${otherNormalFee}</td>
+        <tr>
+        <tr>
+          <th>${otherName}</th>
+          <td>1</td>
+          <td>${otherFractionFee}</td>
+        <tr>
+        <tr>
+          <th>${otherName}</th>
+          <td>${numOtherOther}</td>
+          <td>${otherOtherFee}</td>
+        <tr>
+        `
+      }
+      return `
+      <tr>
+        <th>${otherName}</th>
+        <td>${numOtherPeople - numOtherOther}</td>
+        <td>${otherNormalFee}</td>
+      <tr>
+      <tr>
+        <th>${otherName}</th>
+        <td>${numOtherOther}</td>
+        <td>${otherOtherFee}</td>
+      <tr>
+      `
+    }
+
     const container = document.getElementById(RESULT_ID)
     container.innerHTML = `
     <table>
@@ -277,14 +379,10 @@ export default class Warikan {
       <tr>
       <tr>
         <th>一般</th>
-        <td>${numPeople - 1}</td>
+        <td>${numPeople - numOtherPeople}</td>
         <td>${normalFee}</td>
       <tr>
-      <tr>
-        <th>${otherName}</th>
-        <td>${1}</td>
-        <td>${otherFee}</td>
-      <tr>
+      ${insertOtherFeeRow()}
       <tr>
         <th>カンパ</th>
         <td></td>
