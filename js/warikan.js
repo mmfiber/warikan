@@ -1,9 +1,9 @@
 "use strict"
 import { WARIKAN_ROUND_TYPE_ENUM } from "./enum.js"
 
-const FORM_ID     = "warikan_form"
-const TEMPLATE_ID_INPUT = "form_tmpl_input"
-const TEMPLATE_ID_ACTION_BTN = "form_tmpl_action_btn"
+const FORM_ID       = "warikan_form"
+const ACTION_BTN_ID = "action_btn"
+const TEMPLATE_ID   = "form_tmpl_input"
 
 export default class Warikan {
   formItems = {
@@ -50,36 +50,41 @@ export default class Warikan {
   }
 
   createForm() {
-    const form = document.getElementById(FORM_ID)
+    const form      = document.getElementById(FORM_ID)
+    const actionBtn = document.getElementById(ACTION_BTN_ID)
 
     for(const k in this.formItems) {
-      const item = this.formItems[k]
+      const itemNode = this.formItemToNode(
+        this.formItems[k].id,
+        this.formItems[k].type,
+        this.formItems[k].value,
+        this.formItems[k].options
+      )
+      if(!itemNode) return new Error()
 
-      let input = null
-      if (item.type === "number") {
-        input = this.createInputNode(item.id, item.type, item.value)
-      }
-      if (item.type === "radio") {
-        const fragment = document.createDocumentFragment();
-        item.options.forEach(o => {
-          const node = this.createInputNodeWithLabel(null, item.type, o.value, o.label, item.id)
-          fragment.appendChild(node)
-        })
-        input = fragment
-      }
-
-      if(!input) return new Error()
-
-      const inputNode = this.cloneNodeById(TEMPLATE_ID_INPUT)
+      const inputNode = this.cloneNodeById(TEMPLATE_ID)
       const container = inputNode.querySelector(".input_container")
-      container.innerHTML = `${item.label}:<br>`
-      container.appendChild(input)
+      container.innerHTML = `${this.formItems[k].label}:<br>`
+      container.appendChild(itemNode)
 
-      form.appendChild(inputNode)
+      form.insertBefore(inputNode, actionBtn)
     }
+  }
 
-    const actionBtnNode = this.cloneNodeById(TEMPLATE_ID_ACTION_BTN)
-    form.appendChild(actionBtnNode)
+  formItemToNode(id, type, value, options) {
+    let itemNode = null
+    if (type === "number") {
+      itemNode = this.createInputNode(id, type, value)
+    }
+    if (type === "radio") {
+      const fragment = document.createDocumentFragment();
+      options.forEach(option => {
+        const node = this.createInputNodeWithLabel(null, type, value, option.label, id)
+        fragment.appendChild(node)
+      })
+      itemNode = fragment
+    }
+    return itemNode
   }
 
   cloneNodeById(htmlId) {
