@@ -1,13 +1,15 @@
 "use strict"
 import { WARIKAN_ROUND_TYPE_ENUM } from "./enum.js"
+import { isNumber, isNaturalNumber } from "./utils.js"
 
 const FORM_ID       = "warikan_form"
 const ACTION_BTN_ID = "action_btn"
 const TEMPLATE_ID   = "form_tmpl_input"
+const RESULT_ID     = "warikan_result"
 
 const formItems = {
-  totalAmount: {
-    id: "total_amount",
+  totalFee: {
+    id: "total_fee",
     type: "number",
     label: "総額",
   },
@@ -68,21 +70,6 @@ export default class Warikan {
     }
   }
 
-  fetchData() {
-    const data = {}
-    for(const property in this.formItems) {
-      const id = this.formItems[property].id
-      const query = 
-        this.formItems[property].type === "number"
-          ? "input"
-          : "input:checked"
-      const inputNode = document.getElementById(id)
-      const inputElem = inputNode.querySelector(query)
-      data[property]  = inputElem ? inputElem.value : null
-    }
-    return data
-  }
-
   formItemToNode(id, type, options) {
     let itemNode = null
     if (type === "number") {
@@ -128,8 +115,100 @@ export default class Warikan {
     return labelElem
   }
 
-  validate(htmlId, cb) {
-    // validate 
-    // ge
+  fetchData() {
+    const data = {}
+    for(const property in this.formItems) {
+      const id = this.formItems[property].id
+      const query = 
+        this.formItems[property].type === "number"
+          ? "input"
+          : "input:checked"
+      const inputNode = document.getElementById(id)
+      const inputElem = inputNode.querySelector(query)
+      data[property] = inputElem ? inputElem.value : null
+    }
+    return data
+  }
+
+  validateAndParseData(data) {
+    let isValid      = false
+    const parsedData = {}
+    const error      = []
+
+    const isEnoughArgs = () => formItems.length === data.length
+    if(!isEnoughArgs()) {
+      error.push({id: null, msg: "internal error"})
+      return isValid, parsedData, error
+    }
+
+    for(const k in data) {
+      const parsedNum  = Number.parseInt(data[k])
+      parsedData[k] = parsedNum
+
+      const isValidVal = 
+        k === "donation"
+          ? isNaturalNumber(parsedNum)
+          : isNumber(parsedNum)
+      if(!isValidVal) error.push({id: this.formItems[k].id, msg: "input error"})
+    }
+    isValid = error.length === 0
+
+    return { isValid, parsedData, error }
+  }
+
+  /**
+   *  data:
+   *  must be validated and parsed
+   *  must has the same properties as formItems
+   */
+   calcAndDisplayResult(data) {
+    const remaingFee = data.totalFee - data.totalFee
+    const normalFee  = calcNormalFee(
+      remaingFee,
+      data.numPeople,
+      data.roundUnit,
+      data.roundType
+    )
+    const otherFee = calcOtherFee(
+      remaingFee,
+      normalFee,
+      data.numPeople
+    )
+    this.displayResult(
+      data.totalFee,
+      data.donation,
+      data.numPeople,
+      normalFee,
+      otherFee
+    ) 
+  }
+
+  calcNormalFee(remaingFee, numPeople, roundUnit, roundType) {
+    switch(roundType) {
+      case WARIKAN_ROUND_TYPE_ENUM.PAY_A_LOT_THNKS:
+        return Math.floor(remaingFee / numPeople / roundUnit) * roundUnit
+      case WARIKAN_ROUND_TYPE_ENUM.ORGANIZER_THNKS:
+        return Math.ceil(remaingFee / numPeople / roundUnit) * roundUnit
+      default:
+        return Math.floor(remaingFee / numPeople / roundUnit) * roundUnit
+    }
+  }
+
+  calcOtherFee(remaingFee, normalFee, numPeople) {
+    return remaingFee - normalFee * (numPeople - 1)
+  }
+
+  displayResult(
+    totalFee,
+    donation,
+    numPeople,
+    normalFee,
+    otherFee
+  ) {
+    const container = document.getElementById(RESULT_ID)
+  }
+
+  showError(args) {
+    window.alert(args)
   }
 }

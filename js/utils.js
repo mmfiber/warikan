@@ -4,3 +4,13 @@ export const snakeToCamel = (str) => {
   })
   return replaced
 }
+
+export const isNumber = (num) => {
+  const int = Number.parseInt(num)
+  return !isNaN(int)
+}
+
+export const isNaturalNumber = (num) => {
+  const int = Number.parseInt(num)
+  return isNumber(num) && int > 0
+}
