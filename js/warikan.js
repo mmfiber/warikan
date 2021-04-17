@@ -11,7 +11,7 @@ const formItems = {
   totalFee: {
     id: "total_fee",
     type: "number",
-    label: "総額",
+    label: "支払総額",
   },
   donation: {
     id: "donation",
@@ -21,7 +21,7 @@ const formItems = {
   roundUnit: {
     id: "round_unit",
     type: "number",
-    label: "丸め込み単位",
+    label: "丸め単位",
   },
   numPeople: {
     id: "num_people",
@@ -162,24 +162,33 @@ export default class Warikan {
    *  must has the same properties as formItems
    */
    calcAndDisplayResult(data) {
-    const remaingFee = data.totalFee - data.totalFee
-    const normalFee  = calcNormalFee(
+    const remaingFee = data.totalFee - data.donation
+    const normalFee  = this.calcNormalFee(
       remaingFee,
       data.numPeople,
       data.roundUnit,
       data.roundType
     )
-    const otherFee = calcOtherFee(
+    console.log(
+      remaingFee,
+      data.numPeople,
+      data.roundUnit,
+      data.roundType
+    )
+    const otherFee = this.calcOtherFee(
       remaingFee,
       normalFee,
       data.numPeople
     )
+    const otherName = this.getOtherName(data.roundType)
+
     this.displayResult(
       data.totalFee,
       data.donation,
       data.numPeople,
       normalFee,
-      otherFee
+      otherFee,
+      otherName
     ) 
   }
 
@@ -198,14 +207,55 @@ export default class Warikan {
     return remaingFee - normalFee * (numPeople - 1)
   }
 
+  getOtherName(roundType) {
+    switch(roundType) {
+      case WARIKAN_ROUND_TYPE_ENUM.PAY_A_LOT_THNKS:
+        return "先輩"
+      case WARIKAN_ROUND_TYPE_ENUM.ORGANIZER_THNKS:
+        return "幹事"
+      default:
+        return "だれかさん"
+    }
+  }
+
   displayResult(
     totalFee,
     donation,
     numPeople,
     normalFee,
-    otherFee
+    otherFee,
+    otherName
   ) {
     const container = document.getElementById(RESULT_ID)
+    container.innerHTML = `
+    <table>
+      <tr>
+        <th>支払い総額</th>
+        <th>人数</th>
+        <th>支払い額【円】</th>
+      <tr>
+      <tr>
+        <th>一般</th>
+        <td>${numPeople - 1}</td>
+        <td>${normalFee}</td>
+      <tr>
+      <tr>
+        <th>${otherName}</th>
+        <td>${1}</td>
+        <td>${otherFee}</td>
+      <tr>
+      <tr>
+        <th>カンパ</th>
+        <td></td>
+        <td>${donation}</td>
+      <tr>
+      <tr>
+        <th>合計</th>
+        <td>${numPeople}</td>
+        <td>${totalFee}</td>
+      <tr>
+    </table>
+    `
   }
 
   showError(args) {
