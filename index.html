@@ -12,17 +12,14 @@
     <p><label class="input_container"></label></p>
   </template>
 
-  <!-- template for action btn -->
-  <template id="form_tmpl_action_btn">
-    <p class="action_btn_wrapper">
-      <input type="submit" value="計算">
-      <input type="reset" value="クリア">
-    </p>
-  </template>
-
   <div id="container">
     <h1>割り勘計算</h1>
-    <form id="warikan_form"></form>
+    <form id="warikan_form">
+      <p id="action_btn" class="action_btn_wrapper">
+        <input type="submit" value="計算">
+        <input type="reset" value="クリア">
+      </p>
+    </form>
   </div>
   <script src="./js/main.js" type="module"></script>
 </body>

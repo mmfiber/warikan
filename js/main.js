@@ -5,15 +5,26 @@ import Warikan from "./warikan.js"
 const warikan = new Warikan()
 const warikanForm = document.getElementById("warikan_form")
 
-function onSubmitWarikanForm() {
-  // get warikan input
-  // validate input
-  // calculate warikan
-  // output result
+function onSubmitWarikanForm(event) {
+  // to avoid reflesh browser
+  event.preventDefault()
+  const {
+    totalAmount,
+    donation,
+    roundUnit,
+    numPeople,
+    roundType,
+  } = warikan.fetchData()
+  console.log({
+    totalAmount,
+    donation,
+    roundUnit,
+    numPeople,
+    roundType,
+  })
 }
 
 function main() {
-  // create warikan form
   warikan.createForm()
   warikanForm.addEventListener("submit", onSubmitWarikanForm)
 }

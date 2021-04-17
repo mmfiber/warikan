@@ -5,49 +5,46 @@ const FORM_ID       = "warikan_form"
 const ACTION_BTN_ID = "action_btn"
 const TEMPLATE_ID   = "form_tmpl_input"
 
+const formItems = {
+  totalAmount: {
+    id: "total_amount",
+    type: "number",
+    label: "総額",
+  },
+  donation: {
+    id: "donation",
+    type: "number",
+    label: "カンパ",
+  },
+  roundUnit: {
+    id: "round_unit",
+    type: "number",
+    label: "丸め込み単位",
+  },
+  numPeople: {
+    id: "num_people",
+    type: "number",
+    label: "人数",
+  },
+  roundType: {
+    id: "round_type",
+    type: "radio",
+    label: "端数処理",
+    options: [
+      {
+        label: "先輩ありがとう",
+        value: WARIKAN_ROUND_TYPE_ENUM.PAY_A_LOT_THNKS
+      },
+      {
+        label: "幹事ありがとう",
+        value: WARIKAN_ROUND_TYPE_ENUM.ORGANIZER_THNKS
+      },
+    ]
+  },
+}
+
 export default class Warikan {
-  formItems = {
-    totalAmount: {
-      id: "total_amount",
-      type: "number",
-      label: "総額",
-      value: 0
-    },
-    donation: {
-      id: "donation",
-      type: "number",
-      label: "カンパ",
-      value: 0
-    },
-    roundUnit: {
-      id: "roundUnit",
-      type: "number",
-      label: "丸め込み単位",
-      value: 0
-    },
-    numPeople: {
-      id: "num_people",
-      type: "number",
-      label: "人数",
-      value: 0
-    },
-    roundType: {
-      id: "round_type",
-      type: "radio",
-      label: "端数処理",
-      value: 0,
-      options: [
-        {
-          label: "先輩ありがとう",
-          value: WARIKAN_ROUND_TYPE_ENUM.PAY_A_LOT_THNKS
-        },
-        {
-          label: "幹事ありがとう",
-          value: WARIKAN_ROUND_TYPE_ENUM.ORGANIZER_THNKS
-        },
-      ]
-    },
-  }
+  formItems = formItems
 
   createForm() {
     const form      = document.getElementById(FORM_ID)
@@ -57,13 +54,13 @@ export default class Warikan {
       const itemNode = this.formItemToNode(
         this.formItems[k].id,
         this.formItems[k].type,
-        this.formItems[k].value,
         this.formItems[k].options
       )
       if(!itemNode) return new Error()
 
       const inputNode = this.cloneNodeById(TEMPLATE_ID)
       const container = inputNode.querySelector(".input_container")
+      container.id = this.formItems[k].id,
       container.innerHTML = `${this.formItems[k].label}:<br>`
       container.appendChild(itemNode)
 
@@ -71,17 +68,33 @@ export default class Warikan {
     }
   }
 
-  formItemToNode(id, type, value, options) {
+  fetchData() {
+    const data = {}
+    for(const property in this.formItems) {
+      const id = this.formItems[property].id
+      const query = 
+        this.formItems[property].type === "number"
+          ? "input"
+          : "input:checked"
+      const inputNode = document.getElementById(id)
+      const inputElem = inputNode.querySelector(query)
+      data[property]  = inputElem ? inputElem.value : null
+    }
+    return data
+  }
+
+  formItemToNode(id, type, options) {
     let itemNode = null
     if (type === "number") {
-      itemNode = this.createInputNode(id, type, value)
+      itemNode = this.createInputElem(type)
     }
     if (type === "radio") {
       const fragment = document.createDocumentFragment();
-      options.forEach(option => {
-        const node = this.createInputNodeWithLabel(null, type, value, option.label, id)
+      options.forEach(o => {
+        const node = this.createInputElemWithLabel(type, null, o.value, o.label, id)
         fragment.appendChild(node)
       })
+      fragment.id = id
       itemNode = fragment
     }
     return itemNode
@@ -94,25 +107,25 @@ export default class Warikan {
       : new Error(htmlId)
   }
 
-  createInputNode(id, type, value, name=null) {
-    const inputNode = document.createElement("input")
+  createInputElem(type, id=null, value=null, name=null) {
+    const inputElem = document.createElement("input")
     if(id)
-      inputNode.id = id
+      inputElem.id = id
     if(type)
-      inputNode.type = type
+      inputElem.type = type
     if(value)
-      inputNode.value = value
+      inputElem.value = value
     if(name)
-      inputNode.name = name
-    return inputNode
+      inputElem.name = name
+    return inputElem
   }
 
-  createInputNodeWithLabel(id, type, value, label, name) {
-    const inputNode = this.createInputNode(id, type, value, name)
-    const labelNode = document.createElement("label")
-    labelNode.appendChild(inputNode)
-    labelNode.insertAdjacentHTML("beforeend", label)
-    return labelNode
+  createInputElemWithLabel(type, id, value, label, name) {
+    const inputElem = this.createInputElem(type, id, value, name)
+    const labelElem = document.createElement("label")
+    labelElem.appendChild(inputElem)
+    labelElem.insertAdjacentHTML("beforeend", label)
+    return labelElem
   }
 
   validate(htmlId, cb) {
