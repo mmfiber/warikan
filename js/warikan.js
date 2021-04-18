@@ -272,73 +272,52 @@ export default class Warikan {
     numOtherPeople,
     numOtherOther,
   ) {
-    const insertOtherFeeRow = () => {
-      if(!otherOtherFee) {
-        return `
-        <tr>
-          <th>${otherName}</th>
-          <td>${numOtherPeople}</td>
-          <td>${otherNormalFee}</td>
-        <tr>
-        `
-      } 
-      if(otherFractionFee) {
-        return `
-        <tr>
-          <th>${otherName}</th>
-          <td>${numOtherPeople - numOtherOther - 1}</td>
-          <td>${otherNormalFee}</td>
-        <tr>
-        <tr>
-          <th>${otherName}</th>
-          <td>1</td>
-          <td>${otherFractionFee}</td>
-        <tr>
-        <tr>
-          <th>${otherName}</th>
-          <td>${numOtherOther}</td>
-          <td>${otherOtherFee}</td>
-        <tr>
-        `
-      }
-      return `
-      <tr>
-        <th>${otherName}</th>
-        <td>${numOtherPeople - numOtherOther}</td>
-        <td>${otherNormalFee}</td>
-      <tr>
-      <tr>
-        <th>${otherName}</th>
-        <td>${numOtherOther}</td>
-        <td>${otherOtherFee}</td>
-      <tr>
-      `
+    const numOtherNormal = () => {
+      if(!otherOtherFee) return numOtherPeople
+      if(!otherFractionFee) return numOtherPeople - numOtherOther
+      return numOtherPeople - numOtherOther - 1
     }
 
     const container = document.getElementById(RESULT_ID)
     container.innerHTML = `
     <table>
-      <tr>
-        <th>支払い総額</th>
-        <th>人数</th>
-        <th>支払い額【円】</th>
-      <tr>
-      <tr>
-        <th>一般</th>
-        <td>${numPeople - numOtherPeople}</td>
-        <td>${normalFee}</td>
-      <tr>
-      ${insertOtherFeeRow()}
-      <tr>
-        <th>カンパ</th>
-        <td></td>
-        <td>${donation}</td>
-      <tr>
-      <tr>
-        <th>合計</th>
-        <td>${numPeople}</td>
-        <td>${totalFee}</td>
-      <tr>
+      <tbody>
+        <tr>
+          <th>支払い総額</th>
+          <th>人数</th>
+          <th>支払い額【円】</th>
+        </tr>
+        <tr>
+          <th>一般</th>
+          <td>${numPeople - numOtherPeople}</td>
+          <td>${normalFee}</td>
+        </tr>
+        <tr>
+          <th>${otherName}</th>
+          <td>${numOtherNormal()}</td>
+          <td>${otherNormalFee}</td>
+        </tr>
+        <tr style="display: ${otherFractionFee ? 'table-row' : 'none'}">
+          <th>${otherName}</th>
+          <td>1</td>
+          <td>${otherFractionFee}</td>
+        </tr>
+        <tr style="display: ${otherOtherFee ? 'table-row' : 'none'}">
+          <th>${otherName}</th>
+          <td>${numOtherOther}</td>
+          <td>${otherOtherFee}</td>
+        </tr>
+        <tr>
+          <th>カンパ</th>
+          <td></td>
+          <td>${donation}</td>
+        </tr>
+        <tr>
+          <th>合計</th>
+          <td>${numPeople}</td>
+          <td>${totalFee}</td>
+        </tr>
+      </tbody>
     </table>
     `
   }
