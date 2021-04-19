@@ -15,10 +15,15 @@ function onSubmitWarikanForm(event) {
 function onClickCalcWarikan() {
   const data = warikan.fetchData()
 
-  const {isValid, parsedData, error } = warikan.validateAndParseData(data)
+  const {
+    isValid,
+    parsedData,
+    error 
+  } = warikan.validateAndParseData(data)
   if(!isValid) return warikan.showError(error)
 
-  warikan.calcAndDisplayResult(parsedData)
+  const results = warikan.calc(parsedData)
+  warikan.displayResult(results)
 }
 
 function main() {

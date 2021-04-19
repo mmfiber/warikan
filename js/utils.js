@@ -24,3 +24,41 @@ export const uuid = () => {
   })
   return uuid
 }
+
+export const cloneNodeById = (htmlId) => {
+  const element = document.getElementById(htmlId)
+  return element 
+    ? element.content.cloneNode(true)
+    : new Error(htmlId)
+}
+
+export const setupHTMLElementWithId = (id, factory=()=>"") => {
+  const element =  document.getElementById(id)
+  if(!element) return null
+ 
+  element.id        = id
+  element.innerHTML = factory()
+  return element
+}
+
+export const setupHTMLElementWithQuery = (query, factory=()=>"", id=null) => {
+  const element =  document.querySelector(query)
+  if(!element) return null
+ 
+  if(id) element.id = id
+  element.innerHTML = factory()
+  return element
+}
+
+export const generateHTMLElement = (tag, id=null, factory= ()=>"") => {
+  // if(!id && !query) return null
+
+  // const element = 
+  //   id 
+  //   ? document.getElementById(id)
+  //   : document.querySelector(query)
+  // if(!element) return null
+
+  // element.innerHTML = factory()
+  // return element
+}

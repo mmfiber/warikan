@@ -1,7 +1,12 @@
 "use strict"
 import { WARIKAN_ROUND_TYPE_ENUM } from "./enum.js"
-import { isNumber, isNaturalNumber, uuid } from "./utils.js"
 import { formItems } from "./formItems.js"
+import {
+  isNumber,
+  isNaturalNumber,
+  uuid,
+  cloneNodeById,
+} from "./utils.js"
 
 const FORM_ID       = "warikan_form"
 const ACTION_BTN_ID = "action_btn"
@@ -22,7 +27,7 @@ export default class Warikan {
       )
       if(!itemElem) return new Error()
 
-      const inputElem = this.cloneNodeById(TEMPLATE_ID)
+      const inputElem = cloneNodeById(TEMPLATE_ID)
       const container = inputElem.querySelector(".input_container")
       container.id        = formItems[k].id,
       container.innerHTML = `${formItems[k].label}:<br>`
@@ -36,13 +41,6 @@ export default class Warikan {
     return type === "number"
       ? this.createInputElem(type, value)
       : this.createMultiInputsElem(type, value, id, options)
-  }
-
-  cloneNodeById(htmlId) {
-    const element = document.getElementById(htmlId)
-    return element 
-      ? element.content.cloneNode(true)
-      : new Error(htmlId)
   }
 
   createInputElem(type, value, id=null, name=null, checked=null) {
@@ -140,12 +138,17 @@ export default class Warikan {
     const parsedData = {}
     const error      = []
 
-    const isEnoughArgs = () => formItems.length === data.length
+    // validate args
+    const isEnoughArgs = () => {
+      const formItemsKeys = Object.keys(formItems)
+      return Object.keys(data).every(key => formItemsKeys.includes(key))
+    }
     if(!isEnoughArgs()) {
       error.push({id: null, msg: "internal error"})
       return isValid, parsedData, error
     }
 
+    // validate form items
     for(const k in data) {
       const parsed  =
         k === "otherPeopleName"
@@ -172,46 +175,26 @@ export default class Warikan {
     }
   }
 
-  /**
-   *  data:
-   *  must be validated and parsed
-   *  must has the same properties as formItems
-   */
-   calcAndDisplayResult(data) {
-    const remaingFee     = data.totalFee - data.donation
-    const numOtherPeople = data.otherPeopleName.length
+   calc(parsedData) {
+    const { totalFee, donation, roundUnit, numPeople, roundType, otherPeopleName } = parsedData
+
+    const remaingFee     = totalFee - donation
+    const numOtherPeople = otherPeopleName.length
     const normalFee = this.calcNormalFee(
       remaingFee,
-      data.numPeople,
-      data.roundUnit,
-      data.roundType
+      numPeople,
+      roundUnit,
+      roundType
     )
-    const {
-      otherNormalFee,
-      otherOtherFee,
-      otherFractionFee,
-      numOtherOther
-    } = this.calcOtherFee(
+    const otherFeesInfo = this.calcOtherFee(
       remaingFee,
       normalFee,
-      data.numPeople,
+      numPeople,
       numOtherPeople,
-      data.roundUnit
+      roundUnit
     )
-    const otherName = this.getOtherName(data.roundType)
-
-    this.displayResult(
-      data.totalFee,
-      data.donation,
-      data.numPeople,
-      normalFee,
-      otherNormalFee,
-      otherOtherFee,
-      otherFractionFee,
-      otherName,
-      numOtherPeople,
-      numOtherOther
-    ) 
+    otherFeesInfo.otherName = this.getOtherName(roundType)
+    return { totalFee, donation, numPeople, normalFee, ...otherFeesInfo }
   }
 
   calcNormalFee(remaingFee, numPeople, roundUnit, roundType=null) {
@@ -228,10 +211,9 @@ export default class Warikan {
   calcOtherFee(remaingFee, normalFee, numPeople, numOtherPeople, roundUnit) {
     const otherRemaingFee = remaingFee - normalFee * (numPeople - numOtherPeople)
     const otherNormalFee  = this.calcNormalFee(otherRemaingFee, numOtherPeople, roundUnit)
-    let fraction = otherRemaingFee - otherNormalFee * numOtherPeople
-    if(fraction === 0) return { otherNormalFee }
 
-    let count = 0
+    let count    = 0
+    let fraction = otherRemaingFee - otherNormalFee * numOtherPeople
     while(fraction >= roundUnit) {
       fraction -= roundUnit
       count++
@@ -239,13 +221,22 @@ export default class Warikan {
     const otherOtherFee = otherNormalFee + roundUnit
 
     let otherFractionFee = null
-    if (fraction !== 0) otherFractionFee = otherNormalFee + fraction
+    let numOtherFraction = 0
+    if (fraction !== 0) {
+      otherFractionFee = otherNormalFee + fraction
+      numOtherFraction = 1
+    }
+
+    const numOtherOther  = count
+    const numOtherNormal = numOtherPeople - numOtherOther - numOtherFraction
 
     return {
       otherNormalFee,
       otherOtherFee,
       otherFractionFee,
-      numOtherOther: count,
+      numOtherNormal,
+      numOtherOther,
+      numOtherFraction,
     }
   }
 
@@ -260,24 +251,21 @@ export default class Warikan {
     }
   }
 
-  displayResult(
-    totalFee,
-    donation,
-    numPeople,
-    normalFee,
-    otherNormalFee,
-    otherOtherFee,
-    otherFractionFee,
-    otherName,
-    numOtherPeople,
-    numOtherOther,
-  ) {
-    const numOtherNormal = () => {
-      if(!otherOtherFee) return numOtherPeople
-      if(!otherFractionFee) return numOtherPeople - numOtherOther
-      return numOtherPeople - numOtherOther - 1
-    }
-
+  displayResult(results) {
+    const {
+      totalFee,
+      donation,
+      numPeople,
+      normalFee,
+      otherNormalFee,
+      otherOtherFee,
+      otherFractionFee,
+      otherName,
+      numOtherNormal,
+      numOtherOther,
+      numOtherFraction
+    } = results
+    const numNormalPeople = numPeople - (numOtherNormal + numOtherOther + numOtherFraction)
     const container = document.getElementById(RESULT_ID)
     container.innerHTML = `
     <table>
@@ -289,20 +277,20 @@ export default class Warikan {
         </tr>
         <tr>
           <th>一般</th>
-          <td>${numPeople - numOtherPeople}</td>
+          <td>${numNormalPeople}</td>
           <td>${normalFee}</td>
         </tr>
         <tr>
           <th>${otherName}</th>
-          <td>${numOtherNormal()}</td>
+          <td>${numOtherNormal}</td>
           <td>${otherNormalFee}</td>
         </tr>
-        <tr style="display: ${otherFractionFee ? 'table-row' : 'none'}">
+        <tr style="display: ${numOtherFraction === 0 ? 'none' : 'table-row'}">
           <th>${otherName}</th>
-          <td>1</td>
+          <td>${numOtherFraction}</td>
           <td>${otherFractionFee}</td>
         </tr>
-        <tr style="display: ${otherOtherFee ? 'table-row' : 'none'}">
+        <tr style="display: ${numOtherOther === 0 ? 'none' : 'table-row'}">
           <th>${otherName}</th>
           <td>${numOtherOther}</td>
           <td>${otherOtherFee}</td>
