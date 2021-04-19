@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>割り勘</title>
+</head>
+<body>
+  <!-- template for input -->
+  <template id="form_tmpl_input">
+    <p><label class="input_container"></label></p>
+  </template>
+
+  <div id="container">
+    <h1>割り勘計算</h1>
+    <form id="warikan_form">
+      <p id="action_btn" class="action_btn_wrapper">
+        <input id="calc_warikan_btn" type="submit" value="計算">
+        <input id="clear_warikan_btn" type="reset" value="クリア">
+      </p>
+    </form>
+    <div id="warikan_result"></div>
+  </div>
+  <script src="./static/js/main.js" type="module"></script>
+</body>
+</html>
